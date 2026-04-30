@@ -98,6 +98,8 @@ main{position:relative;z-index:1;max-width:500px;margin:0 auto;padding:16px 12px
 .info-item-value{font-size:11px;font-weight:600;}
 .btn-wa{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;background:rgba(37,211,102,0.08);border:1px solid rgba(37,211,102,0.25);color:#25D366;font-family:'Montserrat',sans-serif;font-size:11px;font-weight:600;padding:11px;border-radius:10px;cursor:pointer;margin-top:12px;text-decoration:none;transition:all .2s;}
 .btn-wa:hover{background:rgba(37,211,102,0.15);}
+.btn-sms{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;background:rgba(106,40,255,0.08);border:1px solid rgba(106,40,255,0.25);color:#B899FF;font-family:'Montserrat',sans-serif;font-size:11px;font-weight:600;padding:11px;border-radius:10px;cursor:pointer;margin-top:8px;text-decoration:none;transition:all .2s;}
+.btn-sms:hover{background:rgba(106,40,255,0.15);}
 .empty{text-align:center;padding:40px 20px;color:var(--muted);}
 .empty .icon{font-size:40px;margin-bottom:12px;opacity:0.3;}
 .empty p{font-size:12px;letter-spacing:1px;}
@@ -260,6 +262,7 @@ const PW='esnayder2026';
 const MONTHS=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 const WDAYS=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 const ROLES=['Câmera principal','Câmera 2','Drone','Fotografia','Edição','Live','Outro'];
+const ALERT_PHONE='557998925807';
 
 let curMonth=4,curYear=2026,isAdmin=false,activeFilter='all',selectedDay=null,teamRows=[];
 
@@ -299,6 +302,7 @@ const isToday=d=>new Date(d+'T00:00:00').getTime()===today.getTime();
 const daysUntil=d=>Math.ceil((new Date(d+'T00:00:00')-today)/86400000);
 const fmtDate=d=>{const x=new Date(d+'T00:00:00');return`${String(x.getDate()).padStart(2,'0')}/${String(x.getMonth()+1).padStart(2,'0')}/${x.getFullYear()}`};
 const getTeamNames=t=>t&&t.length?t.map(m=>m.name).join(', '):'';
+const buildReminderText=(e,when)=>`🔔 Lembrete ${when}\n📅 ${fmtDate(e.date)}${e.time?' às '+e.time:''}\n🎬 ${e.band}\n📍 ${e.location||'Local a confirmar'}${e.address?`\n🏠 ${e.address}`:''}`;
 
 function renderNext(){
   const evs=load('ev').filter(e=>!isPast(e.date)&&e.status!=='cancelled').sort((a,b)=>new Date(a.date)-new Date(b.date));
@@ -376,7 +380,11 @@ function renderEvents(){
     const day=String(d.getDate()).padStart(2,'0');const wday=WDAYS[d.getDay()];const past=isPast(e.date);
     const teamHtml=e.team&&e.team.length?e.team.map(m=>`<div class="team-member"><div><div class="member-name">${m.name}</div><div class="member-role">${m.role||'—'}</div></div><span class="member-status ${m.status==='Confirmado'?'ms-ok':'ms-wait'}">${m.status||'—'}</span></div>`).join(''):`<div style="font-size:11px;color:var(--muted);font-style:italic">A definir</div>`;
     const waMsg=encodeURIComponent(`🎬 *ESNAYDER VIDEOMAKER*\n📅 ${fmtDate(e.date)}${e.time?' — '+e.time:''}\n🎤 ${e.band}\n📍 ${e.location||''}${e.address?'\n🏠 '+e.address:''}${e.type?'\n🎯 '+e.type:''}${getTeamNames(e.team)?'\n\n👥 Equipe: '+getTeamNames(e.team):''}${e.obs?'\n\n⚠ OBS: '+e.obs:''}`);
-    return`<div class="event-card ${past?'past-card':''}" id="card-${e.id}"><div class="event-header" onclick="toggleCard('card-${e.id}')"><div class="event-date-box ${past?'past-box':''}"><div class="eday">${day}</div><div class="ewday">${wday}</div></div><div class="event-info"><div class="event-band">${e.band}</div><div class="event-loc">📍 ${e.location||'—'}</div>${e.time?`<div class="event-time">⏱ ${e.time}</div>`:''}<span class="event-type-tag">${e.type||'Show'}</span></div><div class="event-chevron">▼</div></div><div class="event-detail"><div class="detail-row"><span class="status-badge ${sMap[e.status]||'s-confirmed'}">● ${sLabel[e.status]||'Confirmado'}</span></div>${(e.client||e.value||e.address)?`<div class="detail-row"><div class="detail-label">Informações</div><div class="info-grid">${e.client?`<div class="info-item"><div class="info-item-label">Cliente</div><div class="info-item-value">${e.client}</div></div>`:''} ${e.value?`<div class="info-item"><div class="info-item-label">Valor</div><div class="info-item-value">R$ ${e.value}</div></div>`:''} ${e.address?`<div class="info-item" style="grid-column:1/-1"><div class="info-item-label">Endereço</div><div class="info-item-value">${e.address}</div></div>`:''}</div></div>`:''}<div class="detail-row"><div class="detail-label">Equipe</div><div class="team-grid">${teamHtml}</div></div>${e.obs?`<div class="detail-row"><div class="detail-label">Observações para a equipe</div><div class="obs-box">${e.obs}</div></div>`:''}<a class="btn-wa" href="https://wa.me/?text=${waMsg}" target="_blank">📱 Compartilhar no WhatsApp</a></div></div>`;
+    const waReminderDay=encodeURIComponent(buildReminderText(e,'1 dia antes (manhã cedo)'));
+    const waReminderSoon=encodeURIComponent(buildReminderText(e,'20 minutos antes'));
+    const smsReminderDay=encodeURIComponent(buildReminderText(e,'1 dia antes (manhã cedo)'));
+    const smsReminderSoon=encodeURIComponent(buildReminderText(e,'20 minutos antes'));
+    return`<div class="event-card ${past?'past-card':''}" id="card-${e.id}"><div class="event-header" onclick="toggleCard('card-${e.id}')"><div class="event-date-box ${past?'past-box':''}"><div class="eday">${day}</div><div class="ewday">${wday}</div></div><div class="event-info"><div class="event-band">${e.band}</div><div class="event-loc">📍 ${e.location||'—'}</div>${e.time?`<div class="event-time">⏱ ${e.time}</div>`:''}<span class="event-type-tag">${e.type||'Show'}</span></div><div class="event-chevron">▼</div></div><div class="event-detail"><div class="detail-row"><span class="status-badge ${sMap[e.status]||'s-confirmed'}">● ${sLabel[e.status]||'Confirmado'}</span></div>${(e.client||e.value||e.address)?`<div class="detail-row"><div class="detail-label">Informações</div><div class="info-grid">${e.client?`<div class="info-item"><div class="info-item-label">Cliente</div><div class="info-item-value">${e.client}</div></div>`:''} ${e.value?`<div class="info-item"><div class="info-item-label">Valor</div><div class="info-item-value">R$ ${e.value}</div></div>`:''} ${e.address?`<div class="info-item" style="grid-column:1/-1"><div class="info-item-label">Endereço</div><div class="info-item-value">${e.address}</div></div>`:''}</div></div>`:''}<div class="detail-row"><div class="detail-label">Equipe</div><div class="team-grid">${teamHtml}</div></div>${e.obs?`<div class="detail-row"><div class="detail-label">Observações para a equipe</div><div class="obs-box">${e.obs}</div></div>`:''}<a class="btn-wa" href="https://wa.me/?text=${waMsg}" target="_blank">📱 Compartilhar no WhatsApp</a><a class="btn-wa" href="https://wa.me/${ALERT_PHONE}?text=${waReminderDay}" target="_blank">⏰ WhatsApp: 1 dia antes</a><a class="btn-wa" href="https://wa.me/${ALERT_PHONE}?text=${waReminderSoon}" target="_blank">⏰ WhatsApp: 20 min antes</a><a class="btn-sms" href="sms:+${ALERT_PHONE}?&body=${smsReminderDay}">💬 SMS: 1 dia antes</a><a class="btn-sms" href="sms:+${ALERT_PHONE}?&body=${smsReminderSoon}">💬 SMS: 20 min antes</a></div></div>`;
   }).join('')+`<div class="obs-footer">⚠ Agenda sujeita a alterações</div>`;
 }
 
